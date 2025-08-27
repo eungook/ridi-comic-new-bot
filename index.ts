@@ -11,6 +11,8 @@ import { JSDOM } from "jsdom";
  */
 
 
+// types
+
 /**
  * 만화책 정보
  * - 만화책 리스트에서 제공하는 정보
@@ -31,6 +33,57 @@ interface Comic1 {
      */
     price: number;
 }
+
+/**
+ * 만화책 정보
+ * - 만화책 상세 페이지에서 제공하는 정보
+ */
+interface Comic2 {
+    /**
+     * 만화책 출간/업데이트 일
+     * - 출간: 단편 혹은 시리즈의 1권
+     * - 업데이트: 시리즈의 후속권
+     */
+    date: Date;
+
+    /**
+     * 기타 정보
+     * - 그림, 원작, 글,그림, 원화, 번역, 출판
+     */
+    subText: string;
+}
+
+/**
+ * 만화책 정보
+ * - 만화책 리스트와 상세 페이지에서 제공하는 정보를 합친 정보
+ */
+type Comic = Comic1 & Comic2;
+
+
+// main
+const comicList = await getComicList();
+console.log({ comicList });
+
+
+// functions
+
+/**
+ * 리디 만화 신간 리스트와 그 상세 페이지에서 제공하는 만화책 정보를 가져오는 함수
+ */
+async function getComicList(): Promise<Comic[]> {
+    const comicList: Comic[] = [];
+
+    const comic1List = await getComic1List();
+    for (const comic1 of comic1List) { // note: 동기적으로 처리하기 위해 for-of 사용 // 비동기적으로 처리하면 해당 서버에 문제가 생길 수 있고, 최악의 경우 차단당할 수도 있다.
+        const comic2 = await getComic2Info(comic1.url);
+        const comic: Comic = { ...comic1, ...comic2 };
+        comicList.push(comic);
+    }
+    
+    return comicList;
+}
+
+
 
 /**
  * 리디 만화 신간 리스트에서 만화책 리스트 정보를 가져오는 함수
@@ -85,60 +138,6 @@ async function getComic1List(): Promise<Comic1[]> {
         return comics;
     }, [] as Comic1[]);
     return comics;
-}
-
-const comics = await getComic1List();
-// console.log({ comics });
-
-
-// const url = "https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic";
-// const comic2 = await getBookInfo(url);
-// console.log({ comic2 });
-
-// const urls = [
-//     'https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic',
-//     'https://ridibooks.com/books/505098234?_rdt_sid=new_release&_rdt_idx=1&_rdt_arg=comic',
-//     'https://ridibooks.com/books/297083309?_rdt_sid=new_release&_rdt_idx=2&_rdt_arg=comic',
-//     'https://ridibooks.com/books/1690004072?_rdt_sid=new_release&_rdt_idx=3&_rdt_arg=comic',
-//     'https://ridibooks.com/books/845051579?_rdt_sid=new_release&_rdt_idx=4&_rdt_arg=comic',
-//     'https://ridibooks.com/books/4239000252?_rdt_sid=new_release&_rdt_idx=5&_rdt_arg=comic',
-//     'https://ridibooks.com/books/505098248?_rdt_sid=new_release&_rdt_idx=6&_rdt_arg=comic',
-//     'https://ridibooks.com/books/678027443?_rdt_sid=new_release&_rdt_idx=7&_rdt_arg=comic',
-//     'https://ridibooks.com/books/806017187?_rdt_sid=new_release&_rdt_idx=8&_rdt_arg=comic',
-//     'https://ridibooks.com/books/806017185?_rdt_sid=new_release&_rdt_idx=9&_rdt_arg=comic',
-//     'https://ridibooks.com/books/806017188?_rdt_sid=new_release&_rdt_idx=10&_rdt_arg=comic',
-// ]
-
-for (const comic1 of comics) {
-    try {
-        const comic2 = await getComic2Info(comic1.url);
-        console.log({ ...comic1, ...comic2 });
-
-    } catch (error) {
-        console.error({
-            comic1,
-            error,
-        });
-    }
-}
-
-/**
- * 만화책 정보
- * - 만화책 상세 페이지에서 제공하는 정보
- */
-interface Comic2 {
-    /**
-     * 만화책 출간/업데이트 일
-     * - 출간: 단편 혹은 시리즈의 1권
-     * - 업데이트: 시리즈의 후속권
-     */
-    date: Date;
-
-    /**
-     * 기타 정보
-     * - 그림, 원작, 글,그림, 원화, 번역, 출판
-     */
-    subText: string;
 }
 
 /**
@@ -233,7 +232,7 @@ async function getComic2Info(url: string): Promise<Comic2> {
 }
 
 
-// util
+// utils
 
 /**
  * html 내용을 읽어 {@link JSDOM}의 document 객체를 반환한다.
