@@ -249,6 +249,8 @@ export function readBody(body: string) {
  * @param isWaiting 대기 여부 (기본값: true)
  */
 export async function fetchBody(url: string, isWaiting = true) {
+    console.log(`fetchBody() url: ${url}`);
+    
     const response = await fetch(url);
     if (isWaiting) { await wait(1); } // 차단을 피하기 위해
 

@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run index.ts"
+    "comic": "bun run comic.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
