@@ -5,22 +5,57 @@ import { JSDOM } from "jsdom";
  * - [x] 책 출간/업데이트 정보 가져오기
  * - [x] 해당 정보 Date로 파싱하기
  * - [x] 서로 다른 URL에서 출간/업데이트 정보 정상적으로 가져오는지 확인하기
+ * - [x] 신간 리스트에서 만화책 상세 페이지 주소 가져오기
  */
 
+const url = "https://ridibooks.com/new-releases/comic?type=total&adult_exclude=y&page=1&order=RECENT";
+
+const body = await fetchBody(url);
+const document = readBody(body);
+// console.log({
+//     "document.body.innerHTML": document.body.innerHTML.slice(0, 10000),
+// });
+
+const main = document.querySelector('main');
+if (!main) {
+    throw new Error("main not found");
+}
+
+const section = main.children[0];
+if (!section) {
+    throw new Error("section not found");
+}
+
+const ul = section.children[3];
+if (!ul) {
+    throw new Error("ul not found");
+}
+
+const lis = ul.querySelectorAll('li');
+const urls = Array.from(lis).reduce((urls, li) => {
+    const a = li.querySelector('a');
+    if (!a) { return urls; } // early return
+
+    const url = `https://ridibooks.com${a.href}`;
+    urls.push(url);
+    return urls;
+}, [] as string[]);
+console.log({ urls });
+
 // const url = "https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic";
-const urls = [
-    'https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic',
-    'https://ridibooks.com/books/505098234?_rdt_sid=new_release&_rdt_idx=1&_rdt_arg=comic',
-    'https://ridibooks.com/books/297083309?_rdt_sid=new_release&_rdt_idx=2&_rdt_arg=comic',
-    'https://ridibooks.com/books/1690004072?_rdt_sid=new_release&_rdt_idx=3&_rdt_arg=comic',
-    'https://ridibooks.com/books/845051579?_rdt_sid=new_release&_rdt_idx=4&_rdt_arg=comic',
-    'https://ridibooks.com/books/4239000252?_rdt_sid=new_release&_rdt_idx=5&_rdt_arg=comic',
-    'https://ridibooks.com/books/505098248?_rdt_sid=new_release&_rdt_idx=6&_rdt_arg=comic',
-    'https://ridibooks.com/books/678027443?_rdt_sid=new_release&_rdt_idx=7&_rdt_arg=comic',
-    'https://ridibooks.com/books/806017187?_rdt_sid=new_release&_rdt_idx=8&_rdt_arg=comic',
-    'https://ridibooks.com/books/806017185?_rdt_sid=new_release&_rdt_idx=9&_rdt_arg=comic',
-    'https://ridibooks.com/books/806017188?_rdt_sid=new_release&_rdt_idx=10&_rdt_arg=comic',
-]
+// const urls = [
+//     'https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic',
+//     'https://ridibooks.com/books/505098234?_rdt_sid=new_release&_rdt_idx=1&_rdt_arg=comic',
+//     'https://ridibooks.com/books/297083309?_rdt_sid=new_release&_rdt_idx=2&_rdt_arg=comic',
+//     'https://ridibooks.com/books/1690004072?_rdt_sid=new_release&_rdt_idx=3&_rdt_arg=comic',
+//     'https://ridibooks.com/books/845051579?_rdt_sid=new_release&_rdt_idx=4&_rdt_arg=comic',
+//     'https://ridibooks.com/books/4239000252?_rdt_sid=new_release&_rdt_idx=5&_rdt_arg=comic',
+//     'https://ridibooks.com/books/505098248?_rdt_sid=new_release&_rdt_idx=6&_rdt_arg=comic',
+//     'https://ridibooks.com/books/678027443?_rdt_sid=new_release&_rdt_idx=7&_rdt_arg=comic',
+//     'https://ridibooks.com/books/806017187?_rdt_sid=new_release&_rdt_idx=8&_rdt_arg=comic',
+//     'https://ridibooks.com/books/806017185?_rdt_sid=new_release&_rdt_idx=9&_rdt_arg=comic',
+//     'https://ridibooks.com/books/806017188?_rdt_sid=new_release&_rdt_idx=10&_rdt_arg=comic',
+// ]
 
 for (const url of urls) {
     try {
