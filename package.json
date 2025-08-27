@@ -1,0 +1,14 @@
+{
+  "name": "ridi-comic-new-bot",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
