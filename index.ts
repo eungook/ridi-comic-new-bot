@@ -6,6 +6,7 @@ import { JSDOM } from "jsdom";
  * - [x] 해당 정보 Date로 파싱하기
  * - [x] 서로 다른 URL에서 출간/업데이트 정보 정상적으로 가져오는지 확인하기
  * - [x] 신간 리스트에서 만화책 상세 페이지 주소 가져오기
+ * - [x] 신간 리스트에서 만화책 제목, 소장 가격 가져오기
  */
 
 const url = "https://ridibooks.com/new-releases/comic?type=total&adult_exclude=y&page=1&order=RECENT";
@@ -31,16 +32,37 @@ if (!ul) {
     throw new Error("ul not found");
 }
 
-const lis = ul.querySelectorAll('li');
-const urls = Array.from(lis).reduce((urls, li) => {
-    const a = li.querySelector('a');
-    if (!a) { return urls; } // early return
+interface Comic {
+    url: string;
+    title: string;
+    price: number;
+}
 
+const lis = ul.querySelectorAll('li');
+const comics = Array.from(lis).reduce((comics, li) => {
+    const as = li.querySelectorAll('a');
+    if (as.length === 0) { return comics; } // early return
+
+    // url, title
+    const a = as[1];
+    if (!a || !a.href || !a.textContent) { return comics; } // early return
     const url = `https://ridibooks.com${a.href}`;
-    urls.push(url);
-    return urls;
-}, [] as string[]);
-console.log({ urls });
+    const title = a.textContent;
+
+    // price
+    const ps = li.querySelectorAll('p');
+    if (ps.length === 0) { return comics; } // early return
+    const pLast = ps[ps.length - 1]; // 참고: <p>들에는 책 설명과 대여 가격 정보, 소장 가격 정보가 있다. 그리고 맨 마지막에 소장 가격 정보가 있다.
+    if (!pLast || !pLast.textContent) { return comics; } // early return
+
+    const textContent1 = pLast.textContent.split("원")[0] ?? ''; // 참고: 소장 4,050원전권 소장 20,250원(10%)22,500원-> 소장 4,050
+    const textContent2 = textContent1.split(" ")[1] ?? ''; // 참고: 소장 4,050-> 4,050
+    const price = parseInt(textContent2.replace(/,/g, '')); // 참고: 소장 4,050원 -> 4050
+
+    comics.push({ url, title, price });
+    return comics;
+}, [] as Comic[]);
+console.log({ comics });
 
 // const url = "https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic";
 // const urls = [
@@ -57,17 +79,17 @@ console.log({ urls });
 //     'https://ridibooks.com/books/806017188?_rdt_sid=new_release&_rdt_idx=10&_rdt_arg=comic',
 // ]
 
-for (const url of urls) {
-    try {
-        await getBookInfo(url);
+// for (const url of urls) {
+//     try {
+//         await getBookInfo(url);
 
-    } catch (error) {
-        console.error({
-            url,
-            error,
-        });
-    }
-}
+//     } catch (error) {
+//         console.error({
+//             url,
+//             error,
+//         });
+//     }
+// }
 
 /**
  * 책 정보를 가져온다.
