@@ -66,7 +66,9 @@ async function getComic1List(): Promise<Comic1[]> {
         // url, title
         const a = as[1];
         if (!a || !a.href || !a.textContent) { return comics; } // early return
-        const url = `https://ridibooks.com${a.href}`;
+        const url1 = `https://ridibooks.com${a.href}`;
+        const url2 = new URL(url1);
+        const url = url2.origin + url2.pathname; // 쿼리스트링 제거
         const title = a.textContent;
     
         // price
