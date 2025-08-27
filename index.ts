@@ -9,60 +9,84 @@ import { JSDOM } from "jsdom";
  * - [x] 신간 리스트에서 만화책 제목, 소장 가격 가져오기
  */
 
-const url = "https://ridibooks.com/new-releases/comic?type=total&adult_exclude=y&page=1&order=RECENT";
 
-const body = await fetchBody(url);
-const document = readBody(body);
-// console.log({
-//     "document.body.innerHTML": document.body.innerHTML.slice(0, 10000),
-// });
-
-const main = document.querySelector('main');
-if (!main) {
-    throw new Error("main not found");
-}
-
-const section = main.children[0];
-if (!section) {
-    throw new Error("section not found");
-}
-
-const ul = section.children[3];
-if (!ul) {
-    throw new Error("ul not found");
-}
-
-interface Comic {
+/**
+ * 만화책 정보
+ * - 만화책 리스트에서 제공하는 정보
+ */
+interface Comic1 {
+    /**
+     * 만화책 상세 페이지 URL
+     */
     url: string;
+
+    /**
+     * 만화책 제목
+     */
     title: string;
+
+    /**
+     * 만화책 소장 가격
+     */
     price: number;
 }
 
-const lis = ul.querySelectorAll('li');
-const comics = Array.from(lis).reduce((comics, li) => {
-    const as = li.querySelectorAll('a');
-    if (as.length === 0) { return comics; } // early return
+/**
+ * 리디 만화 신간 리스트에서 만화책 리스트 정보를 가져오는 함수
+ */
+async function getComic1List(): Promise<Comic1[]> {
+    const url = "https://ridibooks.com/new-releases/comic?type=total&adult_exclude=y&page=1&order=RECENT";
+    const body = await fetchBody(url);
+    const document = readBody(body);
 
-    // url, title
-    const a = as[1];
-    if (!a || !a.href || !a.textContent) { return comics; } // early return
-    const url = `https://ridibooks.com${a.href}`;
-    const title = a.textContent;
+    // dom
+    const main = document.querySelector('main');
+    if (!main) {
+        throw new Error("main not found");
+    }
 
-    // price
-    const ps = li.querySelectorAll('p');
-    if (ps.length === 0) { return comics; } // early return
-    const pLast = ps[ps.length - 1]; // 참고: <p>들에는 책 설명과 대여 가격 정보, 소장 가격 정보가 있다. 그리고 맨 마지막에 소장 가격 정보가 있다.
-    if (!pLast || !pLast.textContent) { return comics; } // early return
+    const section = main.children[0];
+    if (!section) {
+        throw new Error("section not found");
+    }
 
-    const textContent1 = pLast.textContent.split("원")[0] ?? ''; // 참고: 소장 4,050원전권 소장 20,250원(10%)22,500원-> 소장 4,050
-    const textContent2 = textContent1.split(" ")[1] ?? ''; // 참고: 소장 4,050-> 4,050
-    const price = parseInt(textContent2.replace(/,/g, '')); // 참고: 소장 4,050원 -> 4050
+    const ul = section.children[3];
+    if (!ul) {
+        throw new Error("ul not found");
+    }
 
-    comics.push({ url, title, price });
+    const lis = ul.querySelectorAll('li');
+
+    // comics
+    const comics = Array.from(lis).reduce((comics, li) => {
+        const as = li.querySelectorAll('a');
+        if (as.length === 0) { return comics; } // early return
+    
+        // url, title
+        const a = as[1];
+        if (!a || !a.href || !a.textContent) { return comics; } // early return
+        const url = `https://ridibooks.com${a.href}`;
+        const title = a.textContent;
+    
+        // price
+        const ps = li.querySelectorAll('p');
+        if (ps.length === 0) { return comics; } // early return
+        const pLast = ps[ps.length - 1]; // 참고: <p>들에는 책 설명과 대여 가격 정보, 소장 가격 정보가 있다. 그리고 맨 마지막에 소장 가격 정보가 있다.
+        if (!pLast || !pLast.textContent) { return comics; } // early return
+    
+        const textContent1 = pLast.textContent.split("원")[0] ?? ''; // 참고: 소장 4,050원전권 소장 20,250원(10%)22,500원-> 소장 4,050
+        const textContent2 = textContent1.split(" ")[1] ?? ''; // 참고: 소장 4,050-> 4,050
+        const price = parseInt(textContent2.replace(/,/g, '')); // 참고: 소장 4,050원 -> 4050
+    
+        comics.push({ url, title, price });
+        return comics;
+    }, [] as Comic1[]);
     return comics;
-}, [] as Comic[]);
+}
+
+const comics = await getComic1List();
 console.log({ comics });
+
 
 // const url = "https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic";
 // const urls = [
