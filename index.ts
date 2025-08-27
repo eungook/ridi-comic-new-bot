@@ -1,14 +1,34 @@
+import { JSDOM } from "jsdom";
+
 /**
  * - [x] fetch 해보기
- * - [ ] 책 출간/업데이트 정보 가져오기
+ * - [x] 책 출간/업데이트 정보 가져오기
  * - [ ] 해당 정보 Date로 파싱하기
  */
 
 
 const url = "https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic";
 const body = await fetchBody(url);
-console.log({ body: body.slice(0, 1000) });
+// console.log({ body: body.slice(0, 10000) });
 
+const document = readBody(body);
+console.log({
+    "document.title": document.title,
+    "document.body": document.body.innerHTML,
+    // "리디 접속이 원활하지 않습니다." 라는 메세지가 p#access_check에 출력되지만, 이하 내용은 정상적으로 출력되는 것 같다.
+});
+
+
+
+/**
+ * html 내용을 읽어 {@link JSDOM}의 document 객체를 반환한다.
+ */
+export function readBody(body: string) {
+    const dom = new JSDOM(body);
+    const { window } = dom;
+    const { document } = window;
+    return document;
+}
 
 /**
  * 해당 URL의 body를 반환한다.
