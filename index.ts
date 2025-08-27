@@ -7,6 +7,7 @@ import { JSDOM } from "jsdom";
  * - [x] 서로 다른 URL에서 출간/업데이트 정보 정상적으로 가져오는지 확인하기
  * - [x] 신간 리스트에서 만화책 상세 페이지 주소 가져오기
  * - [x] 신간 리스트에서 만화책 제목, 소장 가격 가져오기
+ * - [x] 만화책 상세 페이지에서 기타 정보 가져오기
  */
 
 
@@ -85,10 +86,13 @@ async function getComic1List(): Promise<Comic1[]> {
 }
 
 const comics = await getComic1List();
-console.log({ comics });
+// console.log({ comics });
 
 
 // const url = "https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic";
+// const comic2 = await getBookInfo(url);
+// console.log({ comic2 });
+
 // const urls = [
 //     'https://ridibooks.com/books/505098346?_rdt_sid=new_release&_rdt_idx=0&_rdt_arg=comic',
 //     'https://ridibooks.com/books/505098234?_rdt_sid=new_release&_rdt_idx=1&_rdt_arg=comic',
@@ -103,31 +107,47 @@ console.log({ comics });
 //     'https://ridibooks.com/books/806017188?_rdt_sid=new_release&_rdt_idx=10&_rdt_arg=comic',
 // ]
 
-// for (const url of urls) {
-//     try {
-//         await getBookInfo(url);
+for (const comic1 of comics) {
+    try {
+        const comic2 = await getComic2Info(comic1.url);
+        console.log({ ...comic1, ...comic2 });
 
-//     } catch (error) {
-//         console.error({
-//             url,
-//             error,
-//         });
-//     }
-// }
+    } catch (error) {
+        console.error({
+            comic1,
+            error,
+        });
+    }
+}
+
+/**
+ * 만화책 정보
+ * - 만화책 상세 페이지에서 제공하는 정보
+ */
+interface Comic2 {
+    /**
+     * 만화책 출간/업데이트 일
+     * - 출간: 단편 혹은 시리즈의 1권
+     * - 업데이트: 시리즈의 후속권
+     */
+    date: Date;
+
+    /**
+     * 기타 정보
+     * - 그림, 원작, 글,그림, 원화, 번역, 출판
+     */
+    subText: string;
+}
 
 /**
  * 책 정보를 가져온다.
  * - 책이 시리즈인지 단권인지 판단하여 출간/업데이트 정보를 가져온다.
  * @param url 책 URL
  */
-async function getBookInfo(url: string) {
+async function getComic2Info(url: string): Promise<Comic2> {
     // fetch
     const body = await fetchBody(url);
     const document = readBody(body);
-
-    // title
-    const documentTitle = document.title;
-    const title = documentTitle.split("-")[0]?.trim();
 
     // date
     let date: Date | null = null;
@@ -147,11 +167,6 @@ async function getBookInfo(url: string) {
         
         date = new Date(datetime); // 형식: yyyy-mm-dd
         date.setHours(0); // 참고: yyyy-mm-dd 형식이면 UTC 기준 0시로 처리된다. 즉 GMT+9라면 오전 9시로 처리된다. 그래서 setHours(0)으로 후처리한다.
-        
-        console.log({
-            title,
-            date,
-        });
 
     } else {
         // 시리즈 첫 권, 혹은 단권: 업데이트 정보가 없음
@@ -172,16 +187,51 @@ async function getBookInfo(url: string) {
         }
 
         date = new Date(textContent2); // 형식: yyyy.mm.dd // 참고: yyyy.mm.dd 형식이면 GMT 기준 0시로 처리된다.
-        
-        console.log({
-            title,
-            date,
-        });
     }
+
+    // subText
+    const islandsHeader = document.querySelector("#ISLANDS__Header");
+    if (!islandsHeader) {
+        throw new Error("islandsHeader not found");
+    }
+    const h1 = islandsHeader.querySelector("h1");
+    if (!h1) {
+        throw new Error("h1 not found");
+    }
+    const div = h1.nextSibling?.nextSibling as HTMLElement | null | undefined;
+    if (!div) {
+        throw new Error("div not found");
+    }
+    
+    const div1 = div.children[0]; // 그림, 원작, 글, 그림, 번역
+    if (!div1) {
+        throw new Error("div1 not found");
+    }
+    const lis = div1.querySelectorAll('li');
+    if (lis.length === 0) {
+        throw new Error("lis not found");
+    }
+    const subTexts = Array.from(lis).map(li => li.textContent);
+
+    const div2 = div.children[1]; // 출판
+    if (!div2) {
+        throw new Error("div2 not found");
+    }
+    if (div2.textContent) {
+        subTexts.push(div2.textContent);
+    }
+
+    // const div3 = div.children[2]; // 총 0권
+
+    const subText = subTexts.join(" | ");
+
+    // return
+    const comic2: Comic2 = { date, subText };
+    return comic2;
 }
 
 
-
+// util
 
 /**
  * html 내용을 읽어 {@link JSDOM}의 document 객체를 반환한다.
