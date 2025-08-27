@@ -3,7 +3,7 @@ import { JSDOM } from "jsdom";
 /**
  * - [x] fetch 해보기
  * - [x] 책 출간/업데이트 정보 가져오기
- * - [ ] 해당 정보 Date로 파싱하기
+ * - [x] 해당 정보 Date로 파싱하기
  */
 
 
@@ -12,11 +12,29 @@ const body = await fetchBody(url);
 // console.log({ body: body.slice(0, 10000) });
 
 const document = readBody(body);
-console.log({
-    "document.title": document.title,
-    "document.body": document.body.innerHTML,
-    // "리디 접속이 원활하지 않습니다." 라는 메세지가 p#access_check에 출력되지만, 이하 내용은 정상적으로 출력되는 것 같다.
-});
+// console.log({
+//     "document.title": document.title,
+//     "document.body": document.body.innerHTML,
+//     // "리디 접속이 원활하지 않습니다." 라는 메세지가 p#access_check에 출력되지만, 이하 내용은 정상적으로 출력되는 것 같다.
+// });
+
+const islandsMetadata = document.querySelector("#ISLANDS__Metadata");
+if (!islandsMetadata) {
+    throw new Error("islandsMetadata not found");
+}
+
+const time = islandsMetadata.querySelector("time");
+if (!time) {
+    throw new Error("time not found");
+}
+
+const datetime = time.getAttribute("datetime");
+if (!datetime) {
+    throw new Error("datetime not found");
+}
+
+const date = new Date(datetime);
+console.log({ date });
 
 
 
