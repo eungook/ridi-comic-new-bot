@@ -8,7 +8,40 @@ import { JSDOM } from "jsdom";
  * - [x] 신간 리스트에서 만화책 상세 페이지 주소 가져오기
  * - [x] 신간 리스트에서 만화책 제목, 소장 가격 가져오기
  * - [x] 만화책 상세 페이지에서 기타 정보 가져오기
+ * - [x] 신간 리스트의 <script id="__NEXT_DATA__">의 JSON에서 만화책 정보 가져오기
  */
+
+
+const url = "https://ridibooks.com/new-releases/comic?type=total&adult_exclude=y&page=1&order=RECENT";
+const body = await fetchBody(url);
+const document = readBody(body);
+
+const nextData = document.querySelector("#__NEXT_DATA__");
+if (!nextData) {
+    throw new Error("nextData not found");
+}
+const jsonRaw = nextData.textContent;
+if (!jsonRaw) {
+    throw new Error("jsonRaw not found");
+}
+const json = JSON.parse(jsonRaw);
+const items = json.props.pageProps.dehydratedState.queries[0].state.data.newReleases.items;
+
+for (const item of items) {
+    console.log({
+        // item,
+        id: item.bookShell.book.id,
+        title: item.bookShell.book.title.main,
+        fullPrice: item.bookShell.book.priceInfo.purchase.fullPrice,
+        sellingPrice: item.bookShell.book.priceInfo.purchase.sellingPrice,
+    });
+}
+
+
+
+
+
+
 
 
 // types
@@ -60,9 +93,9 @@ interface Comic2 {
 type Comic = Comic1 & Comic2;
 
 
-// main
-const comicList = await getComicList();
-console.log({ comicList });
+// // main
+// const comicList = await getComicList();
+// console.log({ comicList });
 
 
 // functions
@@ -250,7 +283,7 @@ export function readBody(body: string) {
  */
 export async function fetchBody(url: string, isWaiting = true) {
     console.log(`fetchBody() url: ${url}`);
-    
+
     const response = await fetch(url);
     if (isWaiting) { await wait(1); } // 차단을 피하기 위해
 
