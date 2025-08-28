@@ -10,6 +10,7 @@ import { JSDOM } from "jsdom";
  * - [x] 만화책 상세 페이지에서 기타 정보 가져오기
  * - [x] 신간 리스트의 <script id="__NEXT_DATA__">의 JSON에서 만화책 정보 가져오기
  * - [x] 신간 리스트에서 만화책 정보 가져오기 개선
+ * - [x] 오늘 출간된 만화책 정보만 가져오기
  */
 
 
@@ -64,7 +65,7 @@ type Comic = Comic1 & Comic2;
 
 
 // main
-const comicList = await getComicList();
+const comicList = await getNewComicList();
 console.log({ comicList });
 
 
@@ -72,16 +73,38 @@ console.log({ comicList });
 
 /**
  * 리디 만화 신간 리스트와 그 상세 페이지에서 제공하는 만화책 정보를 가져오는 함수
+ * - 오늘 출간된 만화책 정보를 가져온다.
  */
-async function getComicList(): Promise<Comic[]> {
+async function getNewComicList(): Promise<Comic[]> {
     const comicList: Comic[] = [];
 
-    const comic1List = (await getComic1List()).slice(0, 10); // note: 최대 60개, 전부는 필요 없으므로 우선 10개로 제한
+    // 오늘 날짜 설정
+    // - KST, GMT+9 기준
+    const today = new Date();
+    console.log(`[${new Date().toISOString()}][getNewComicList] today=${today.toISOString()}`);
+    const timezoneOffset = today.getTimezoneOffset() + (9 * 60); // note: 한국 시간 기준으로 설정
+    console.log(`[${new Date().toISOString()}][getNewComicList] timezoneOffset=${timezoneOffset}`);
+    today.setMinutes(today.getMinutes() + timezoneOffset);
+    console.log(`[${new Date().toISOString()}][getNewComicList] today=${today.toISOString()}`);
+    today.setHours(0, 0, 0, 0); // 오전 0시로 설정
+    console.log(`[${new Date().toISOString()}][getNewComicList] today=${today.toISOString()}`);
+
+    const comic1List = (await getComic1List()).slice(0, 30); // note: prefetch된 데이터는 최대 60개-> 안전을 위해 30개로 제한
     for (const comic1 of comic1List) { // note: 동기적으로 처리하기 위해 for-of 사용 // 비동기적으로 처리하면 해당 서버에 문제가 생길 수 있고, 최악의 경우 차단당할 수도 있다.
         const url = `https://ridibooks.com/books/${comic1.id}`;
         const comic2 = await getComic2Info(url);
-        const comic: Comic = { ...comic1, ...comic2 };
-        comicList.push(comic);
+        
+        const isToday = today.getTime() === comic2.date.getTime();
+        console.log(`[${new Date().toISOString()}][getNewComicList] comic2.date=${comic2.date.toISOString()}, isToday=${isToday}`);
+
+        if (isToday) {
+            const comic: Comic = { ...comic1, ...comic2 };
+            comicList.push(comic);
+
+        } else {
+            console.log(`[${new Date().toISOString()}][getNewComicList] break`);
+            break; // note: 오늘 출간된 만화책 정보만 가져오기 위해 오늘 이후의 만화책 정보는 가져오지 않는다.
+        }
     }
     
     return comicList;
