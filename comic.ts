@@ -9,39 +9,8 @@ import { JSDOM } from "jsdom";
  * - [x] 신간 리스트에서 만화책 제목, 소장 가격 가져오기
  * - [x] 만화책 상세 페이지에서 기타 정보 가져오기
  * - [x] 신간 리스트의 <script id="__NEXT_DATA__">의 JSON에서 만화책 정보 가져오기
+ * - [x] 신간 리스트에서 만화책 정보 가져오기 개선
  */
-
-
-const url = "https://ridibooks.com/new-releases/comic?type=total&adult_exclude=y&page=1&order=RECENT";
-const body = await fetchBody(url);
-const document = readBody(body);
-
-const nextData = document.querySelector("#__NEXT_DATA__");
-if (!nextData) {
-    throw new Error("nextData not found");
-}
-const jsonRaw = nextData.textContent;
-if (!jsonRaw) {
-    throw new Error("jsonRaw not found");
-}
-const json = JSON.parse(jsonRaw);
-const items = json.props.pageProps.dehydratedState.queries[0].state.data.newReleases.items;
-
-for (const item of items) {
-    console.log({
-        // item,
-        id: item.bookShell.book.id,
-        title: item.bookShell.book.title.main,
-        fullPrice: item.bookShell.book.priceInfo.purchase.fullPrice,
-        sellingPrice: item.bookShell.book.priceInfo.purchase.sellingPrice,
-    });
-}
-
-
-
-
-
-
 
 
 // types
@@ -52,9 +21,9 @@ for (const item of items) {
  */
 interface Comic1 {
     /**
-     * 만화책 상세 페이지 URL
+     * 만화책 id
      */
-    url: string;
+    id: number;
 
     /**
      * 만화책 제목
@@ -63,6 +32,7 @@ interface Comic1 {
 
     /**
      * 만화책 소장 가격
+     * - 최종 할인 가격 기준
      */
     price: number;
 }
@@ -93,9 +63,9 @@ interface Comic2 {
 type Comic = Comic1 & Comic2;
 
 
-// // main
-// const comicList = await getComicList();
-// console.log({ comicList });
+// main
+const comicList = await getComicList();
+console.log({ comicList });
 
 
 // functions
@@ -106,9 +76,10 @@ type Comic = Comic1 & Comic2;
 async function getComicList(): Promise<Comic[]> {
     const comicList: Comic[] = [];
 
-    const comic1List = await getComic1List();
+    const comic1List = (await getComic1List()).slice(0, 10); // note: 최대 60개, 전부는 필요 없으므로 우선 10개로 제한
     for (const comic1 of comic1List) { // note: 동기적으로 처리하기 위해 for-of 사용 // 비동기적으로 처리하면 해당 서버에 문제가 생길 수 있고, 최악의 경우 차단당할 수도 있다.
-        const comic2 = await getComic2Info(comic1.url);
+        const url = `https://ridibooks.com/books/${comic1.id}`;
+        const comic2 = await getComic2Info(url);
         const comic: Comic = { ...comic1, ...comic2 };
         comicList.push(comic);
     }
@@ -126,51 +97,28 @@ async function getComic1List(): Promise<Comic1[]> {
     const body = await fetchBody(url);
     const document = readBody(body);
 
-    // dom
-    const main = document.querySelector('main');
-    if (!main) {
-        throw new Error("main not found");
+    // <script id="__NEXT_DATA__">
+    // - 여기에 React Query의 prefetch된 데이터가 있다.
+    // - 이 데이터를 파싱하여 만화책 정보를 가져온다.
+    const nextData = document.querySelector("#__NEXT_DATA__");
+    if (!nextData) {
+        throw new Error("nextData not found");
     }
-
-    const section = main.children[0];
-    if (!section) {
-        throw new Error("section not found");
+    const jsonRaw = nextData.textContent;
+    if (!jsonRaw) {
+        throw new Error("jsonRaw not found");
     }
+    const json = JSON.parse(jsonRaw);
+    const items = json.props.pageProps.dehydratedState.queries[0].state.data.newReleases.items;
 
-    const ul = section.children[3];
-    if (!ul) {
-        throw new Error("ul not found");
-    }
+    // 만화책 정보 가져오기
+    const comic1List: Comic1[] = items.map((item: any) => ({
+        id: item.bookShell.book.id as number,
+        title: item.bookShell.book.title.main as string,
+        price: item.bookShell.book.priceInfo.purchase.sellingPrice as number,
+    }));
 
-    const lis = ul.querySelectorAll('li');
-
-    // comics
-    const comics = Array.from(lis).reduce((comics, li) => {
-        const as = li.querySelectorAll('a');
-        if (as.length === 0) { return comics; } // early return
-    
-        // url, title
-        const a = as[1];
-        if (!a || !a.href || !a.textContent) { return comics; } // early return
-        const url1 = `https://ridibooks.com${a.href}`;
-        const url2 = new URL(url1);
-        const url = url2.origin + url2.pathname; // 쿼리스트링 제거
-        const title = a.textContent;
-    
-        // price
-        const ps = li.querySelectorAll('p');
-        if (ps.length === 0) { return comics; } // early return
-        const pLast = ps[ps.length - 1]; // 참고: <p>들에는 책 설명과 대여 가격 정보, 소장 가격 정보가 있다. 그리고 맨 마지막에 소장 가격 정보가 있다.
-        if (!pLast || !pLast.textContent) { return comics; } // early return
-    
-        const textContent1 = pLast.textContent.split("원")[0] ?? ''; // 참고: 소장 4,050원전권 소장 20,250원(10%)22,500원-> 소장 4,050
-        const textContent2 = textContent1.split(" ")[1] ?? ''; // 참고: 소장 4,050-> 4,050
-        const price = parseInt(textContent2.replace(/,/g, '')); // 참고: 소장 4,050원 -> 4050
-    
-        comics.push({ url, title, price });
-        return comics;
-    }, [] as Comic1[]);
-    return comics;
+    return comic1List;
 }
 
 /**
@@ -282,7 +230,7 @@ export function readBody(body: string) {
  * @param isWaiting 대기 여부 (기본값: true)
  */
 export async function fetchBody(url: string, isWaiting = true) {
-    console.log(`fetchBody() url: ${url}`);
+    console.log(`[${new Date().toISOString()}][fetchBody] url=${url}, isWaiting=${isWaiting}`);
 
     const response = await fetch(url);
     if (isWaiting) { await wait(1); } // 차단을 피하기 위해
