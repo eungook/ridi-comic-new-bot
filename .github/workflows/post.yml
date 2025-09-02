@@ -1,0 +1,21 @@
+name: post
+
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC 03:00 = KST 12:00
+    - cron: '0 3 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    # uses
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+    # run
+    - run: bun i
+    - run: bun post
+    env:
+      BLUESKY_USERNAME: ${{ secrets.BLUESKY_USERNAME }}
+      BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
