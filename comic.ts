@@ -1,18 +1,5 @@
 import { JSDOM } from "jsdom";
 
-/**
- * - [x] fetch 해보기
- * - [x] 책 출간/업데이트 정보 가져오기
- * - [x] 해당 정보 Date로 파싱하기
- * - [x] 서로 다른 URL에서 출간/업데이트 정보 정상적으로 가져오는지 확인하기
- * - [x] 신간 리스트에서 만화책 상세 페이지 주소 가져오기
- * - [x] 신간 리스트에서 만화책 제목, 소장 가격 가져오기
- * - [x] 만화책 상세 페이지에서 기타 정보 가져오기
- * - [x] 신간 리스트의 <script id="__NEXT_DATA__">의 JSON에서 만화책 정보 가져오기
- * - [x] 신간 리스트에서 만화책 정보 가져오기 개선
- * - [x] 오늘 출간된 만화책 정보만 가져오기
- */
-
 
 // types
 
@@ -61,12 +48,7 @@ interface Comic2 {
  * 만화책 정보
  * - 만화책 리스트와 상세 페이지에서 제공하는 정보를 합친 정보
  */
-type Comic = Comic1 & Comic2;
-
-
-// main
-const comicList = await getNewComicList();
-console.log({ comicList });
+export type Comic = Comic1 & Comic2;
 
 
 // functions
@@ -75,7 +57,7 @@ console.log({ comicList });
  * 리디 만화 신간 리스트와 그 상세 페이지에서 제공하는 만화책 정보를 가져오는 함수
  * - 오늘 출간된 만화책 정보를 가져온다.
  */
-async function getNewComicList(): Promise<Comic[]> {
+export async function getNewComicList(): Promise<Comic[]> {
     const comicList: Comic[] = [];
 
     // 오늘 날짜 설정
@@ -109,8 +91,6 @@ async function getNewComicList(): Promise<Comic[]> {
     
     return comicList;
 }
-
-
 
 /**
  * 리디 만화 신간 리스트에서 만화책 리스트 정보를 가져오는 함수
