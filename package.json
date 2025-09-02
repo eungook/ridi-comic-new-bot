@@ -3,7 +3,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "comic": "bun run comic.ts",
     "post": "bun run post.ts"
   },
   "devDependencies": {
