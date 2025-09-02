@@ -76,16 +76,16 @@ export async function getNewComicList(): Promise<Comic[]> {
         const url = `https://ridibooks.com/books/${comic1.id}`;
         const comic2 = await getComic2Info(url);
         
-        const isToday = today.getTime() === comic2.date.getTime();
-        console.log(`[${new Date().toISOString()}][getNewComicList] comic2.date=${comic2.date.toISOString()}, isToday=${isToday}`);
+        const isPast = comic2.date.getTime() < today.getTime(); // note: 출간 정보의 출간일이, 리디북스의 등록일보다 느린 경우가 있다. // 예: https://ridibooks.com/books/371003637 (출간일: 2025.09.05, 실제 등록일: 2025.09.02)
+        console.log(`[${new Date().toISOString()}][getNewComicList] comic2.date=${comic2.date.toISOString()}, isPast=${isPast}`);
 
-        if (isToday) {
+        if (isPast) { // 오늘 이전의 만화책 정보는 가져오지 않는다.
+            console.log(`[${new Date().toISOString()}][getNewComicList] break`);
+            break;
+            
+        } else {
             const comic: Comic = { ...comic1, ...comic2 };
             comicList.push(comic);
-
-        } else {
-            console.log(`[${new Date().toISOString()}][getNewComicList] break`);
-            break; // note: 오늘 출간된 만화책 정보만 가져오기 위해 오늘 이후의 만화책 정보는 가져오지 않는다.
         }
     }
     
