@@ -129,7 +129,7 @@ async function getComic1List(): Promise<Comic1[]> {
  * - 책이 시리즈인지 단권인지 판단하여 출간/업데이트 정보를 가져온다.
  * @param url 책 URL
  */
-async function getComic2Info(url: string): Promise<Comic2> {
+export async function getComic2Info(url: string): Promise<Comic2> {
     // fetch
     const body = await fetchBody(url);
     const document = readBody(body);
