@@ -134,83 +134,84 @@ export async function getComic2Info(url: string): Promise<Comic2> {
     const body = await fetchBody(url);
     const document = readBody(body);
 
+    // parse
+    // <script id="ISLANDS__PreparedData">
+    // - 여기에 React Query의 prefetch된 데이터가 있다.
+    // - 이 데이터를 파싱하여 만화책 정보를 가져온다.
+    const preparedData = document.querySelector("#ISLANDS__PreparedData");
+    if (!preparedData) {
+        throw new Error("preparedData not found");
+    }
+    const jsonRaw = preparedData.textContent;
+    if (!jsonRaw) {
+        throw new Error("jsonRaw not found");
+    }
+    const json = JSON.parse(jsonRaw);
+    const cells = json.props.gridQuery.riGrid.grid.cells;
+    if (cells.length === 0) {
+        throw new Error("cells not found");
+    }
+
     // date
     let date: Date | null = null;
-    const islandsMetadata = document.querySelector("#ISLANDS__Metadata");
-    if (!islandsMetadata) {
-        throw new Error("islandsMetadata not found");
-    }
-    
-    // <time>: 업데이트 정보
-    const time = islandsMetadata.querySelector("time");
-    if (time) {
-        // 시리즈 후속권: 업데이트 정보가 있음
-        const datetime = time.getAttribute("datetime");
-        if (!datetime) {
-            throw new Error("datetime not found");
+    const div = document.querySelector("#SeriesListWrap");
+    const isSeries = Boolean(div);
+    console.log(`[${new Date().toISOString()}][getComic2Info] url=${url}, isSeries=${isSeries}`);
+    if (div) {
+        // note: 시리즈가 있는 경우, 리스트의 가장 마지막, 최신 권의 정보를 가져온다.
+        // 참고: preparedData의 BookDetailHomeEpisodeBookList에는 모든 리스트가 들어있지 않다. 그래서 직접 div#SeriesListWrap에서 가져와야 한다.
+        const lis = div.querySelectorAll("li.js_series_book_list");
+        if (lis.length === 0) {
+            throw new Error("lis not found");
         }
-        
-        date = new Date(datetime); // 형식: yyyy-mm-dd
-        date.setHours(0); // 참고: yyyy-mm-dd 형식이면 UTC 기준 0시로 처리된다. 즉 GMT+9라면 오전 9시로 처리된다. 그래서 setHours(0)으로 후처리한다.
-
-    } else {
-        // 시리즈 첫 권, 혹은 단권: 업데이트 정보가 없음
-        // - 대신 출간 정보가 있음
-        const li = islandsMetadata.querySelector('li'); // DOM 트리의 첫번째 li: 출간 정보
+        const newestBook = lis[lis.length - 1];
+        if (!newestBook) {
+            throw new Error("newestBook not found");
+        }
+        const li = newestBook.querySelector("li.info_reg_date") as HTMLElement | null;
         if (!li) {
             throw new Error("li not found");
         }
-
         const textContent = li.textContent;
         if (!textContent) {
             throw new Error("textContent not found");
         }
-
-        const textContent2 = textContent.split(" ")[0];
-        if (!textContent2) {
-            throw new Error("textContent2 not found");
+        date = new Date(textContent.replaceAll(/[^0-9.]/g, "")); // 형식: yyyy.mm.dd. // 참고: yyyy.mm.dd. 형식이면 GMT 기준 0시로 처리된다. // 참고: 여기의 등록일이 metadata의 출간 정보보다 더 정확하다.
+        
+    } else {
+        // note: 시리즈가 없는 단권일 경우, metadata 정보에서 출간 정보를 가져온다.
+        const metadata = cells.find((item: any) => (item.type === "BookDetailHomeMetadata"));
+        if (!metadata) {
+            throw new Error("metadata not found");
         }
-
-        date = new Date(textContent2); // 형식: yyyy.mm.dd // 참고: yyyy.mm.dd 형식이면 GMT 기준 0시로 처리된다.
+        date = new Date(metadata.cell__BookDetailHomeMetadata.publishInfo[0].pubDate); // 형식: yyyy.mm.dd. // 참고: yyyy.mm.dd. 형식이면 GMT 기준 0시로 처리된다.
+    }
+    if (date && isNaN(date.getTime())) {
+        throw new Error("date is invalid");
     }
 
     // subText
-    const islandsHeader = document.querySelector("#ISLANDS__Header");
-    if (!islandsHeader) {
-        throw new Error("islandsHeader not found");
+    const header = cells.find((item: any) => (item.type === "BookDetailHomeHeader")); // note: 만화책 헤더 정보
+    if (!header) {
+        throw new Error("header not found");
     }
-    const h1 = islandsHeader.querySelector("h1");
-    if (!h1) {
-        throw new Error("h1 not found");
+    const information = header.cell__BookDetailHomeHeader.information;
+    if (!information) {
+        throw new Error("information not found");
     }
-    const h2 = islandsHeader.querySelector("h2"); // note: h2는 optional함
-
-    const div = (h2 ? h2.nextSibling?.nextSibling : h1.nextSibling?.nextSibling) as HTMLElement | null | undefined; // note: h1, 혹은 h2의 다음 다음에 subText가 있는 div가 있다.
-    if (!div) {
-        throw new Error("div not found");
+    const publisherName = information.publisherName;
+    if (!publisherName) {
+        throw new Error("publisherName not found");
     }
-    
-    const div1 = div.children[0]; // 그림, 원작, 글, 그림, 번역
-    if (!div1) {
-        throw new Error("div1 not found");
+    const authorGroups = information.authorGroups;
+    if (authorGroups.length === 0) {
+        throw new Error("authorGroups not found");
     }
-    const lis = div1.querySelectorAll('li');
-    if (lis.length === 0) {
-        throw new Error("lis not found");
-    }
-    const subTexts = Array.from(lis).map(li => li.textContent);
-
-    const div2 = div.children[1]; // 출판
-    if (!div2) {
-        throw new Error("div2 not found");
-    }
-    if (div2.textContent) {
-        subTexts.push(div2.textContent);
-    }
-
-    // const div3 = div.children[2]; // 총 0권
-
-    const subText = subTexts.join(" | ");
+    const subText = [...authorGroups.map((item: any) => {
+        const name = item.authors[0].name;
+        const title = item.title;
+        return `${name} ${title}`;
+    }),`${publisherName} 출판`].join(" | ");
 
     // return
     const comic2: Comic2 = { date, subText };
