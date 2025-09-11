@@ -183,7 +183,9 @@ export async function getComic2Info(url: string): Promise<Comic2> {
     if (!h1) {
         throw new Error("h1 not found");
     }
-    const div = h1.nextSibling?.nextSibling as HTMLElement | null | undefined;
+    const h2 = islandsHeader.querySelector("h2"); // note: h2는 optional함
+
+    const div = (h2 ? h2.nextSibling?.nextSibling : h1.nextSibling?.nextSibling) as HTMLElement | null | undefined; // note: h1, 혹은 h2의 다음 다음에 subText가 있는 div가 있다.
     if (!div) {
         throw new Error("div not found");
     }
