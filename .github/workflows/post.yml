@@ -3,8 +3,8 @@ name: post
 on:
   workflow_dispatch:
   schedule:
-    # UTC 03:00 = KST 12:00
-    - cron: '0 3 * * *'
+    # UTC 03:17 = KST 12:17
+    - cron: '17 3 * * *'
 
 jobs:
   build:
