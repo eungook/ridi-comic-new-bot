@@ -112,7 +112,7 @@ async function getComic1List(): Promise<Comic1[]> {
         throw new Error("jsonRaw not found");
     }
     const json = JSON.parse(jsonRaw);
-    const items = json.props.pageProps.dehydratedState.queries[0].state.data.newReleases.items;
+    const items = json.props.pageProps.dehydratedState.queries[1].state.data.newReleases.items;
 
     // 만화책 정보 가져오기
     const comic1List: Comic1[] = items.map((item: any) => ({
@@ -135,19 +135,19 @@ export async function getComic2Info(url: string): Promise<Comic2> {
     const document = readBody(body);
 
     // parse
-    // <script id="ISLANDS__PreparedData">
+    // <script id="__NEXT_DATA__">
     // - 여기에 React Query의 prefetch된 데이터가 있다.
     // - 이 데이터를 파싱하여 만화책 정보를 가져온다.
-    const preparedData = document.querySelector("#ISLANDS__PreparedData");
-    if (!preparedData) {
-        throw new Error("preparedData not found");
+    const nextData = document.querySelector("#__NEXT_DATA__");
+    if (!nextData) {
+        throw new Error("nextData not found");
     }
-    const jsonRaw = preparedData.textContent;
+    const jsonRaw = nextData.textContent;
     if (!jsonRaw) {
         throw new Error("jsonRaw not found");
     }
     const json = JSON.parse(jsonRaw);
-    const cells = json.props.gridQuery.riGrid.grid.cells;
+    const cells = json.props.pageProps.sectionProps.gridQuery.riGrid.grid.cells;
     if (cells.length === 0) {
         throw new Error("cells not found");
     }
