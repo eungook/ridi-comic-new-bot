@@ -3,8 +3,8 @@ name: post
 on:
   workflow_dispatch:
   schedule:
-    # UTC 03:17 = KST 12:17
-    - cron: '17 3 * * *'
+    # UTC 01:17 = KST 10:17 # 하지만 실제로는 큐가 길어서 훨씬 더 늦게 수행됨
+    - cron: '17 1 * * *'
 
 jobs:
   build:
